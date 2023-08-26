@@ -1,0 +1,21 @@
+# This is the UDEV file that will persist a few settings across network adapters
+# You can drop this file under /etc/udev/rules.d
+# You can reboot the VM after having the file placed in the folder or you can also trigger immediate changes by using:
+# sudo udevadm control --reload-rules && udevadm trigger
+
+# Setup Synthetic (virtual) interface
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 8192 tx 8192"
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -N $env{INTERFACE} rx-flow-hash udp4 sd"
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} lro on"
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} tso on"
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} gso on"
+
+# Setup AN interface 
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 18000 tx 2500"
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} lro on"
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} tso on"
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} gso on"
+
+# Sets queue-length
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="10000"
+SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="10000"
