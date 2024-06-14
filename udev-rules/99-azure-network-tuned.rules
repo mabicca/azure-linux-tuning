@@ -19,3 +19,6 @@ SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/et
 # Sets queue-length
 SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="10000"
 SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="10000"
+
+# Adds NOQUEUE to VF
+SUBSYSTEM=="net", DRIVERS=="hv_pci|mlx*", ACTION=="add", RUN+="/usr/sbin/tc qdisc replace dev $env{INTERFACE} root noqueue"
