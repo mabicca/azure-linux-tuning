@@ -6,19 +6,9 @@
 # Setup Synthetic (virtual) interface
 SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 8192 tx 8192"
 SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -N $env{INTERFACE} rx-flow-hash udp4 sd"
-#SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} lro on"
-#SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} tso on"
-#SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} gso on"
 
 # Setup AN interface 
 SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 18000 tx 2500"
-#SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} lro on"
-#SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} tso on"
-#SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -K $env{INTERFACE} gso on"
-
-# Sets queue-length
-#SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="10000"
-#SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="10000"
 
 # Adds NOQUEUE to VF
 SUBSYSTEM=="net", DRIVERS=="hv_pci|mlx*", ACTION=="add", RUN+="/usr/sbin/tc qdisc replace dev $env{INTERFACE} root noqueue"
