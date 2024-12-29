@@ -3,12 +3,19 @@
 # You can reboot the VM after having the file placed in the folder or you can also trigger immediate changes by using:
 # sudo udevadm control --reload-rules && udevadm trigger
 
-# Setup Synthetic (virtual) interface
+# Setup Accelerated Interface ring buffers (Mellanox / Mana) 
 SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 8192 tx 8192"
-SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -N $env{INTERFACE} rx-flow-hash udp4 sd"
 
-# Setup AN interface 
-SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 18000 tx 2500"
+# Setup Synthetic interface ring buffers (hv_netvsc)
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 18000 tx 2500"
+
+# Disable UDP hashing on Synthetic interface (hv_netvsc)
+# Reference: https://www.kernel.org/doc/html/latest/networking/device_drivers/ethernet/microsoft/netvsc.html
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*", ACTION=="add",  RUN+="/usr/sbin/ethtool -N $env{INTERFACE} rx-flow-hash udp4 sd"
 
 # Adds NOQUEUE to VF
 SUBSYSTEM=="net", DRIVERS=="hv_pci|mlx*", ACTION=="add", RUN+="/usr/sbin/tc qdisc replace dev $env{INTERFACE} root noqueue"
+
+# Sets queue-length
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="10000"
+SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="10000"
