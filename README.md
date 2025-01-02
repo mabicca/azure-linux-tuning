@@ -22,3 +22,5 @@ https://learn.microsoft.com/en-us/azure/azure-netapp-files/performance-linux-con
 https://learn.microsoft.com/en-us/azure/azure-netapp-files/performance-linux-nfs-read-ahead
 https://learn.microsoft.com/en-us/azure/azure-netapp-files/azure-netapp-files-smb-performance
 
+# Hyper-V
+https://www.kernel.org/doc/html/latest/networking/device_drivers/ethernet/microsoft/netvsc.html
