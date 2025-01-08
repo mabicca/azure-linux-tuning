@@ -3,11 +3,15 @@
 # You can reboot the VM after having the file placed in the folder or you can also trigger immediate changes by using:
 # sudo udevadm control --reload-rules && udevadm trigger
 
+# RX/TX buffers are usually a good idea to increase to improve performance, but the higher you go the more latency you might have.
+# A good starting point is usually about 1024 buffers for TX/RX, some Mellanox documentation suggests to use 8192/8192.
+# Some testing might need to be done to see what is a good working value, depending on the environment.
+
 # Setup Accelerated Interface ring buffers (Mellanox / Mana) 
-SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 8192 tx 8192"
+SUBSYSTEM=="net", DRIVERS=="hv_pci", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 1024 tx 1024"
 
 # Setup Synthetic interface ring buffers (hv_netvsc)
-SUBSYSTEM=="net", DRIVERS=="hv_netvsc*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 18000 tx 2500"
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*", ACTION=="add",  RUN+="/usr/sbin/ethtool -G $env{INTERFACE} rx 1024 tx 1024"
 
 # Disable UDP hashing on Synthetic interface (hv_netvsc)
 # Reference: https://www.kernel.org/doc/html/latest/networking/device_drivers/ethernet/microsoft/netvsc.html
@@ -17,5 +21,5 @@ SUBSYSTEM=="net", DRIVERS=="hv_netvsc*", ACTION=="add",  RUN+="/usr/sbin/ethtool
 SUBSYSTEM=="net", DRIVERS=="hv_pci|mlx*", ACTION=="add", RUN+="/usr/sbin/tc qdisc replace dev $env{INTERFACE} root noqueue"
 
 # Sets queue-length
-SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="10000"
-SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="10000"
+SUBSYSTEM=="net", DRIVERS=="hv_netvsc*|mlx*|hv_pci", ACTION=="add",  ATTR{tx_queue_len}="2048"
+SUBSYSTEM=="net", KERNEL=="lo", ACTION=="add",  ATTR{tx_queue_len}="5000"
