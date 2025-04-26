@@ -1,0 +1,11 @@
+[Unit]
+Description=example systemd service unit file.
+
+[Service]
+ExecStart=/bin/bash /usr/bin/az-manacheck.sh
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=multi-user.target
