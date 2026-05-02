@@ -13,18 +13,18 @@ Modern systemd (version 243+) allows network tuning through `.link` and `.networ
 
 ## Installation
 
-### Option 1: Using the Provided Configuration Directory
+### Option 1: Using a Separate Directory (Recommended)
 
 ```bash
-sudo mkdir -p /etc/systemd/network/99-default.link
-sudo cp network.conf /etc/systemd/network/99-default.link/
+sudo mkdir -p /etc/systemd/network/99-azure-mana.link.d
+sudo cp network.conf /etc/systemd/network/99-azure-mana.link.d/
 sudo systemctl restart systemd-networkd
 ```
 
-### Option 2: Create as a Direct Link File
+### Option 2: Create as a Direct Link File (Simple)
 
 ```bash
-sudo cp network.conf /etc/systemd/network/99-azure-mana.link
+sudo cp network.conf /etc/systemd/network/99-azure-network.link
 sudo systemctl restart systemd-networkd
 ```
 
@@ -84,19 +84,21 @@ systemctl --version
 
 ## Troubleshooting
 
-### Settings Not Applied
-1. Verify file is in correct location: `/etc/systemd/network/99-*.link`
+### Troubleshooting
+
+**Settings Not Applied:**
+1. Verify file location: `/etc/systemd/network/99-*.link`
 2. Check file permissions: `sudo chmod 644 /etc/systemd/network/99-*.link`
 3. Restart systemd-networkd: `sudo systemctl restart systemd-networkd`
-4. Check for errors: `sudo journalctl -u systemd-networkd -n 50`
+4. Check logs: `sudo journalctl -u systemd-networkd -n 50`
 
-### Interface Naming Issues
-- If interface names are unexpected, adjust the `NamePolicy` section
+**Interface Naming Issues:**
+- Unexpected interface names: Adjust the `NamePolicy` section
 - Device name changes require systemd-networkd restart
 - Verify with: `ip link show`
 
-### Buffer Size Not at Maximum
-- Some NICs don't support hardware buffer configuration
+**Buffer Size Not at Maximum:**
+- Some NICs do not support hardware buffer configuration
 - Check supported values: `ethtool -g <interface>`
 - Fall back to ethtool or sysctl if needed
 
