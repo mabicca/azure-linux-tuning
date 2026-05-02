@@ -1,0 +1,59 @@
+# TCP memory allocation (min, pressure, max in pages). Controls TCP buffer memory limits
+net.ipv4.tcp_mem = 16384 87380 67108864
+
+# UDP memory allocation (min, pressure, max in pages). Controls UDP buffer memory limits
+net.ipv4.udp_mem = 16384 87380 33554432
+
+# TCP receive buffer size (min, default, max in bytes). Determines read buffer sizing for TCP sockets
+net.ipv4.tcp_rmem = 16384 87380 201326592
+
+# TCP send buffer size (min, default, max in bytes). Determines write buffer sizing for TCP sockets
+net.ipv4.tcp_wmem = 16384 65536 201326592
+
+# Default socket receive buffer size in bytes. Initial buffer size for incoming data
+net.core.rmem_default = 100663296
+
+# Default socket write buffer size in bytes. Initial buffer size for outgoing data
+net.core.wmem_default = 100663296
+
+# Minimum UDP write buffer size in bytes. Smallest allocation for UDP send buffers
+net.ipv4.udp_wmem_min = 16384
+
+# Minimum UDP receive buffer size in bytes. Smallest allocation for UDP receive buffers
+net.ipv4.udp_rmem_min = 16384
+
+# Maximum socket write buffer size in bytes. Upper limit for send buffer allocation
+net.core.wmem_max = 402653184
+
+# Maximum socket receive buffer size in bytes. Upper limit for receive buffer allocation
+net.core.rmem_max = 402653184
+
+# Disable TCP timestamps (0=disabled, 1=enabled). Disables timestamp option to reduce overhead
+net.ipv4.tcp_timestamps = 0
+
+# Network device processing budget. Higher values allow more packets processed per NAPI poll cycle
+net.core.netdev_budget = 1000
+
+# Maximum size of option memory buffer in bytes. Limits memory for socket option processing
+net.core.optmem_max = 65535
+
+# Fast Retransmit Transmit Optimization (0=disabled, 1=enabled). Disables fast recovery optimization
+net.ipv4.tcp_frto = 0
+
+# Maximum number of pending (half-open) connections. Increases backlog for connection establishment
+net.core.somaxconn = 16384
+
+# Maximum backlog queue for network devices. Prevents packet drops during traffic spikes
+net.core.netdev_max_backlog = 300000
+
+# Processing weight per network device. Number of packets processed per device per poll iteration
+net.core.dev_weight = 64
+
+# TCP congestion control algorithm. Uses BBR for optimized throughput and lower latency
+net.ipv4.tcp_congestion_control = bbr
+
+# Default queueing discipline. FIFO provides simple, low-latency packet scheduling
+net.core.default_qdisc = pfifo_fast
+
+# Enable TCP MTU probing (0=disabled, 1=enabled). Auto-discovers optimal MTU size for connections
+net.ipv4.tcp_mtu_probing = 1
