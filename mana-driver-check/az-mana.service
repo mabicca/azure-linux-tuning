@@ -1,0 +1,21 @@
+[Unit]
+Description=Azure MANA Driver Monitor - Monitors and reloads MANA driver on error detection
+Documentation=file:///usr/share/doc/azure-linux-tuning/mana/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/az-manacheck.sh
+Restart=on-failure
+RestartSec=5s
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=az-mana
+KillMode=process
+TimeoutStopSec=10s
+
+[Install]
+WantedBy=multi-user.target

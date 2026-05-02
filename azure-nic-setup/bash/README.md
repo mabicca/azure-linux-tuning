@@ -8,10 +8,12 @@ automatically whenever a NIC is added or moved.
 
 | Requirement | Notes |
 |---|---|
-| Linux (systemd) | Ubuntu, Debian, RHEL, Oracle Linux, SUSE — see [TESTING.md](TESTING.md) |
+| Linux (systemd) | Ubuntu, Debian, RHEL, Oracle Linux, SUSE |
 | `bash` ≥ 4.0 | Pre-installed on all supported distros |
 | `ethtool` | Used to read and apply ring sizes |
 | `root` / `sudo` | Required to write to `/etc/systemd/system`, `/etc/udev/rules.d`, and `/usr/local/sbin` |
+
+Known limitation: Red Hat Enterprise Linux 9 is not currently reliable for MANA-based accelerated networking with this setup due to missing upstream/backported MANA patches in some kernel builds.
 
 Install `ethtool` if it is not already present:
 
@@ -161,23 +163,6 @@ sudo ./azure-nic-setup.sh --uninstall
 This removes all installed files and uses the saved state file to restore each
 NIC's original ring sizes.
 
-## Testing
-
-See [TESTING.md](TESTING.md) for full instructions on running local and
-multi-distribution Docker tests.
-
-Quick start:
-
-```bash
-# Local tests (no Docker required)
-chmod +x test-local.sh
-./test-local.sh
-
-# Multi-distro tests (Docker required)
-chmod +x test-distributions.sh
-./test-distributions.sh
-```
-
 ## Troubleshooting
 
 **ethtool reports ring sizes were not changed**
@@ -191,6 +176,11 @@ ethtool -g <interface>
 The script prints a notice rather than failing when these are not available
 (expected in test environments). On a production Azure VM they should always be
 present.
+
+**RHEL 9 and MANA reliability**
+Red Hat Enterprise Linux 9 may not behave reliably for MANA-based accelerated
+networking with this setup due to missing upstream/backported MANA patches in
+some kernel builds.
 
 **Permission denied writing to /etc/**
 Run the script with `sudo`.
