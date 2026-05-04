@@ -652,3 +652,4 @@ udevadm trigger
 
 echo -e "${COLOR_GREEN}Done.${COLOR_RESET}"
 
+
