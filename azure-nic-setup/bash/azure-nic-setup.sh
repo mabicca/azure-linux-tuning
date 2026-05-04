@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ANSI color codes
+COLOR_BLUE="\033[34m"
+COLOR_GREEN="\033[32m"
+COLOR_YELLOW="\033[33m"
+COLOR_CYAN="\033[36m"
+COLOR_RED="\033[31m"
+COLOR_RESET="\033[0m"
+
 # Default values
 AN_RX_RINGS=4096
 AN_TX_RINGS=4096
@@ -75,11 +83,11 @@ warn_if_exceeds_max() {
     debug_log "$iface maximums: RX=$max_rx TX=$max_tx"
 
     if [[ -n "$max_rx" && "$target_rx" =~ ^[0-9]+$ && "$max_rx" =~ ^[0-9]+$ && $target_rx -gt $max_rx ]]; then
-        echo "Warning: $iface requested RX=$target_rx exceeds max RX=$max_rx"
+        echo -e "${COLOR_YELLOW}Warning:${COLOR_RESET} $iface requested RX=${COLOR_BLUE}$target_rx${COLOR_RESET} exceeds max RX=${COLOR_BLUE}$max_rx${COLOR_RESET}"
     fi
 
     if [[ -n "$max_tx" && "$target_tx" =~ ^[0-9]+$ && "$max_tx" =~ ^[0-9]+$ && $target_tx -gt $max_tx ]]; then
-        echo "Warning: $iface requested TX=$target_tx exceeds max TX=$max_tx"
+        echo -e "${COLOR_YELLOW}Warning:${COLOR_RESET} $iface requested TX=${COLOR_BLUE}$target_tx${COLOR_RESET} exceeds max TX=${COLOR_BLUE}$max_tx${COLOR_RESET}"
     fi
 }
 
@@ -172,7 +180,7 @@ done
 
 # Uninstall function
 uninstall() {
-    echo "Removing NIC configuration files..."
+    echo -e "${COLOR_YELLOW}Removing NIC configuration files...${COLOR_RESET}"
     
     # Allow override via environment variables for testing
     SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
@@ -182,18 +190,18 @@ uninstall() {
     # Remove systemd units
     if [[ -f "$SYSTEMD_DIR/set-rings-an@.service" ]]; then
         rm -f "$SYSTEMD_DIR/set-rings-an@.service"
-        echo "Removed: $SYSTEMD_DIR/set-rings-an@.service"
+        echo -e "${COLOR_GREEN}Removed:${COLOR_RESET} $SYSTEMD_DIR/set-rings-an@.service"
     fi
     
     if [[ -f "$SYSTEMD_DIR/set-rings-synth@.service" ]]; then
         rm -f "$SYSTEMD_DIR/set-rings-synth@.service"
-        echo "Removed: $SYSTEMD_DIR/set-rings-synth@.service"
+        echo -e "${COLOR_GREEN}Removed:${COLOR_RESET} $SYSTEMD_DIR/set-rings-synth@.service"
     fi
     
     # Remove udev rules
     if [[ -f "$UDEV_DIR/99-azure-nic-config.rules" ]]; then
         rm -f "$UDEV_DIR/99-azure-nic-config.rules"
-        echo "Removed: $UDEV_DIR/99-azure-nic-config.rules"
+        echo -e "${COLOR_GREEN}Removed:${COLOR_RESET} $UDEV_DIR/99-azure-nic-config.rules"
     fi
 
     # Remove helper script
@@ -201,32 +209,39 @@ uninstall() {
         rm -f "$HELPER_SCRIPT"
         echo "Removed: $HELPER_SCRIPT"
     fi
+
+    # Remove NetworkManager dispatcher script if present
+    NM_DISPATCHER_SCRIPT="/etc/NetworkManager/dispatcher.d/99-azure-nic-rings"
+    if [[ -f "$NM_DISPATCHER_SCRIPT" ]]; then
+        rm -f "$NM_DISPATCHER_SCRIPT"
+        echo "Removed: $NM_DISPATCHER_SCRIPT"
+    fi
     
     # Reload systemd and udev
-    echo "Reloading systemd and udev..."
+    echo -e "${COLOR_CYAN}Reloading systemd and udev...${COLOR_RESET}"
     systemctl daemon-reload || echo "Note: systemctl not available (expected in test environment)"
     udevadm control --reload-rules || echo "Note: udevadm not available (expected in test environment)"
     udevadm trigger || echo "Note: udevadm not available (expected in test environment)"
     
     # Restore original ring settings if state file exists
     if [[ -f "$STATE_FILE" ]]; then
-        echo "Restoring original NIC ring settings..."
+        echo -e "${COLOR_CYAN}Restoring original NIC ring settings...${COLOR_RESET}"
         source "$STATE_FILE"
         
         # Restore settings for each NIC
         for nic in "${!NIC_ORIGINAL_RINGS[@]}"; do
             IFS=',' read -r orig_rx orig_tx <<< "${NIC_ORIGINAL_RINGS[$nic]}"
             if [[ -e /sys/class/net/"$nic" ]]; then
-                echo "  Restoring $nic: RX=$orig_rx TX=$orig_tx"
+                echo -e "  Restoring ${COLOR_CYAN}$nic${COLOR_RESET}: RX=${COLOR_BLUE}$orig_rx${COLOR_RESET} TX=${COLOR_BLUE}$orig_tx${COLOR_RESET}"
                 ethtool -G "$nic" rx "$orig_rx" tx "$orig_tx" 2>/dev/null || echo "    Warning: Could not restore $nic"
             fi
         done
         
         rm -f "$STATE_FILE"
-        echo "Removed state file: $STATE_FILE"
+        echo -e "${COLOR_GREEN}Removed state file:${COLOR_RESET} $STATE_FILE"
     fi
     
-    echo "Uninstall complete."
+    echo -e "${COLOR_GREEN}Uninstall complete.${COLOR_RESET}"
 }
 
 # Function to detect and save original NIC ring settings
@@ -275,7 +290,7 @@ EOF
                 local rx tx
                 IFS=',' read -r rx tx <<< "$rx_tx"
                 echo "NIC_ORIGINAL_RINGS[$nic]=\"$rx,$tx\"" >> "$STATE_FILE" 2>/dev/null || true
-                echo "  Saved $nic: RX=$rx TX=$tx"
+                echo -e "  ${COLOR_GREEN}Saved${COLOR_RESET} ${COLOR_CYAN}$nic${COLOR_RESET}: RX=${COLOR_BLUE}$rx${COLOR_RESET} TX=${COLOR_BLUE}$tx${COLOR_RESET}"
             fi
         fi
     done
@@ -283,17 +298,17 @@ EOF
     
     # Only show message if file was successfully created and written
     if [[ -f "$STATE_FILE" ]]; then
-        echo "State file created: $STATE_FILE"
+        echo -e "${COLOR_GREEN}State file created:${COLOR_RESET} $STATE_FILE"
     fi
 }
 
 apply_ring_settings_now() {
     if ! command -v ethtool &> /dev/null; then
-        echo "Warning: ethtool not found; skipping immediate ring update."
+        echo -e "${COLOR_YELLOW}Warning:${COLOR_RESET} ethtool not found; skipping immediate ring update."
         return 0
     fi
 
-    echo "Applying ring sizes immediately to active interfaces..."
+    echo -e "${COLOR_CYAN}Applying ring sizes immediately to active interfaces...${COLOR_RESET}"
 
     shopt -s nullglob
     for nic_path in /sys/class/net/*; do
@@ -313,9 +328,11 @@ apply_ring_settings_now() {
 
         case "$driver" in
             mana|mlx5|mlx5_core|mlx4|mlx4_en|mlx4_core)
-                # Skip if AN parameters were not explicitly specified
-                if [[ $HAS_AN_PARAMS -eq 0 ]]; then
-                    debug_log "Skipping $nic (accelerated NIC, but --an was not specified)"
+                # Apply AN settings if --an was specified, or if no flags at all
+                # (defaults apply to both types). Skip only if --synth was given
+                # explicitly without --an, indicating the user wants synth-only.
+                if [[ $HAS_SYNTH_PARAMS -eq 1 && $HAS_AN_PARAMS -eq 0 ]]; then
+                    debug_log "Skipping $nic (accelerated NIC, --synth-only run)"
                     continue
                 fi
                 target_rx="$AN_RX_RINGS"
@@ -323,9 +340,10 @@ apply_ring_settings_now() {
                 debug_log "Classified $nic as accelerated (direct driver match)"
                 ;;
             hv_netvsc)
-                # Skip if SYNTH parameters were not explicitly specified
-                if [[ $HAS_SYNTH_PARAMS -eq 0 ]]; then
-                    debug_log "Skipping $nic (synthetic NIC, but --synth was not specified)"
+                # Apply synth settings if --synth was specified, or if no flags at all.
+                # Skip only if --an was given explicitly without --synth.
+                if [[ $HAS_AN_PARAMS -eq 1 && $HAS_SYNTH_PARAMS -eq 0 ]]; then
+                    debug_log "Skipping $nic (synthetic NIC, --an-only run)"
                     continue
                 fi
                 target_rx="$SYNTH_RX_RINGS"
@@ -338,10 +356,10 @@ apply_ring_settings_now() {
                 ;;
         esac
 
-        echo "  $nic ($driver): setting RX=$target_rx TX=$target_tx"
+        echo -e "  ${COLOR_CYAN}$nic${COLOR_RESET} (${COLOR_CYAN}$driver${COLOR_RESET}): setting RX=${COLOR_BLUE}$target_rx${COLOR_RESET} TX=${COLOR_BLUE}$target_tx${COLOR_RESET}"
         warn_if_exceeds_max "$nic" "$target_rx" "$target_tx"
         if ! ethtool -G "$nic" rx "$target_rx" tx "$target_tx" 2>/dev/null; then
-            echo "    Warning: could not apply settings to $nic"
+            echo -e "    ${COLOR_YELLOW}Warning:${COLOR_RESET} could not apply settings to $nic"
         fi
     done
     shopt -u nullglob
@@ -359,9 +377,9 @@ save_original_settings
 
 # Warn if using defaults (no parameters specified)
 if [[ $HAS_PARAMS -eq 0 ]]; then
-    echo "WARNING: No ring size parameters specified. Using defaults:"
-    echo "  Accelerated NICs: RX=$AN_RX_RINGS TX=$AN_TX_RINGS"
-    echo "  Synthetic NICs:   RX=$SYNTH_RX_RINGS TX=$SYNTH_TX_RINGS"
+    echo -e "${COLOR_YELLOW}WARNING:${COLOR_RESET} No ring size parameters specified. Using defaults:"
+    echo -e "  Accelerated NICs: RX=${COLOR_BLUE}$AN_RX_RINGS${COLOR_RESET} TX=${COLOR_BLUE}$AN_TX_RINGS${COLOR_RESET}"
+    echo -e "  Synthetic NICs:   RX=${COLOR_BLUE}$SYNTH_RX_RINGS${COLOR_RESET} TX=${COLOR_BLUE}$SYNTH_TX_RINGS${COLOR_RESET}"
     echo "Use --help to see available options."
     echo ""
 else
@@ -387,12 +405,12 @@ done
 
 confirm_action "configure NIC tuning files and apply ring settings"
 
-echo "Configuring NICs with the following settings:"
+echo -e "${COLOR_CYAN}Configuring NICs with the following settings:${COLOR_RESET}"
 if [[ $HAS_AN_PARAMS -eq 1 ]]; then
-    echo "  Accelerated NICs: RX=$AN_RX_RINGS TX=$AN_TX_RINGS"
+    echo -e "  Accelerated NICs: RX=${COLOR_BLUE}$AN_RX_RINGS${COLOR_RESET} TX=${COLOR_BLUE}$AN_TX_RINGS${COLOR_RESET}"
 fi
 if [[ $HAS_SYNTH_PARAMS -eq 1 ]]; then
-    echo "  Synthetic NICs:   RX=$SYNTH_RX_RINGS TX=$SYNTH_TX_RINGS"
+    echo -e "  Synthetic NICs:   RX=${COLOR_BLUE}$SYNTH_RX_RINGS${COLOR_RESET} TX=${COLOR_BLUE}$SYNTH_TX_RINGS${COLOR_RESET}"
 fi
 echo ""
 
@@ -400,7 +418,7 @@ echo ""
 SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
 UDEV_DIR="${UDEV_DIR:-/etc/udev/rules.d}"
 
-echo "Creating helper script: $HELPER_SCRIPT"
+echo -e "${COLOR_CYAN}Creating helper script:${COLOR_RESET} $HELPER_SCRIPT"
 cat > "$HELPER_SCRIPT" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -524,8 +542,13 @@ warn_if_exceeds_max "\$iface" "\$target_rx" "\$target_tx"
 "\$ethtool_bin" -G "\$iface" rx "\$target_rx" tx "\$target_tx"
 EOF
 chmod +x "$HELPER_SCRIPT"
+# Restore SELinux file context so systemd/udev can execute the script on
+# SELinux-enforcing systems (e.g. RHEL 9). No-op on non-SELinux systems.
+if command -v restorecon &> /dev/null; then
+    restorecon "$HELPER_SCRIPT" || true
+fi
 
-echo "Creating systemd unit: set-rings-an@.service"
+echo -e "${COLOR_CYAN}Creating systemd unit:${COLOR_RESET} set-rings-an@.service"
 cat > "$SYSTEMD_DIR/set-rings-an@.service" <<EOF
 [Unit]
 Description=Set ring sizes for accelerated NIC %i
@@ -539,7 +562,7 @@ ExecStart=$HELPER_SCRIPT --mode an %i
 WantedBy=multi-user.target
 EOF
 
-echo "Creating systemd unit: set-rings-synth@.service"
+echo -e "${COLOR_CYAN}Creating systemd unit:${COLOR_RESET} set-rings-synth@.service"
 cat > "$SYSTEMD_DIR/set-rings-synth@.service" <<EOF
 [Unit]
 Description=Set ring sizes for synthetic NIC %i
@@ -554,51 +577,78 @@ ExecStart=$HELPER_SCRIPT --mode synth %i
 WantedBy=multi-user.target
 EOF
 
-echo "Creating udev rule: 99-azure-nic-config.rules"
+echo -e "${COLOR_CYAN}Creating udev rule:${COLOR_RESET} 99-azure-nic-config.rules"
 cat > "$UDEV_DIR/99-azure-nic-config.rules" <<"EOF"
 # Synthetic NICs (hv_netvsc)
+# ACTION=="add" fires when the synthetic interface first appears
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="hv_netvsc", \
-  TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-synth@%k.service"
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode synth %k"
 
-# Accelerated NICs (mana)
-SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mana", \
-  TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
-
-# Accelerated NICs (mlx5_core)
-SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx5_core", \
-  TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
-
-# Accelerated NICs (mlx4_en)
-SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx4_en", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
-
-# Accelerated NICs (mlx4_core)
-SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx4_core", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
-
-# Accelerated NICs (mana)
+# Accelerated NICs — ACTION=="add" catches initial appearance,
+# ACTION=="move" catches VF rename/rebind (needed for mlx and mana on some distros)
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mana", \
-  TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
+SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mana", \
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
 
-# Accelerated NICs (mlx5_core)
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlx5_core", \
-  TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
+SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx5_core", \
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
 
-# Accelerated NICs (mlx4_en)
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlx4_en", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
+SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx4_en", \
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
 
-# Accelerated NICs (mlx4_core)
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlx4_core", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}="set-rings-an@%k.service"
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
+SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlx4_core", \
+  RUN+="/bin/systemd-run --no-block --collect /usr/local/sbin/azure-apply-rings.sh --mode an %k"
 EOF
 
 apply_ring_settings_now
 
-echo "Reloading systemd and udev"
+# Install NetworkManager dispatcher script if NM is present.
+# On RHEL 9, NetworkManager can apply its own interface settings after udev
+# fires, overwriting ring buffer sizes. The dispatcher re-applies them when
+# NM marks an interface as "up".
+NM_DISPATCHER_DIR="/etc/NetworkManager/dispatcher.d"
+NM_DISPATCHER_SCRIPT="$NM_DISPATCHER_DIR/99-azure-nic-rings"
+if [[ -d "$NM_DISPATCHER_DIR" ]]; then
+    echo -e "${COLOR_GREEN}NetworkManager detected${COLOR_RESET} — installing dispatcher script: ${COLOR_CYAN}$NM_DISPATCHER_SCRIPT${COLOR_RESET}"
+    cat > "$NM_DISPATCHER_SCRIPT" <<NMEOF
+#!/usr/bin/env bash
+# Azure NIC ring buffer dispatcher for NetworkManager
+# Re-applies ethtool ring sizes after NM brings an interface up,
+# ensuring settings persist on RHEL/CentOS where NM manages interfaces.
+IFACE="\$1"
+ACTION="\$2"
+
+if [[ "\$ACTION" != "up" ]]; then
+    exit 0
+fi
+
+HELPER="${HELPER_SCRIPT}"
+if [[ ! -x "\$HELPER" ]]; then
+    exit 0
+fi
+
+"\$HELPER" --mode auto "\$IFACE" || true
+NMEOF
+    chmod +x "$NM_DISPATCHER_SCRIPT"
+    if command -v restorecon &> /dev/null; then
+        restorecon "$NM_DISPATCHER_SCRIPT" || true
+    fi
+    echo -e "${COLOR_GREEN}NetworkManager dispatcher installed.${COLOR_RESET}"
+else
+    echo -e "${COLOR_CYAN}NetworkManager dispatcher directory not found${COLOR_RESET} — skipping (not needed on this distro)."
+fi
+
+echo -e "${COLOR_CYAN}Reloading systemd and udev${COLOR_RESET}"
 systemctl daemon-reload
 udevadm control --reload-rules
 udevadm trigger
 
-echo "Done."
+echo -e "${COLOR_GREEN}Done.${COLOR_RESET}"
 
