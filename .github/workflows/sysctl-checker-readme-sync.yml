@@ -1,0 +1,27 @@
+name: Sysctl Checker README Sync
+
+on:
+  pull_request:
+    paths:
+      - sysctl-checker/sysctl-check.sh
+      - sysctl-checker/README.md
+      - .github/scripts/check-sysctl-checker-readme-flags.sh
+      - .github/workflows/sysctl-checker-readme-sync.yml
+  push:
+    branches:
+      - main
+    paths:
+      - sysctl-checker/sysctl-check.sh
+      - sysctl-checker/README.md
+      - .github/scripts/check-sysctl-checker-readme-flags.sh
+      - .github/workflows/sysctl-checker-readme-sync.yml
+
+jobs:
+  readme-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate README flag coverage
+        run: bash .github/scripts/check-sysctl-checker-readme-flags.sh
